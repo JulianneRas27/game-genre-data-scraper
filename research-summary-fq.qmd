@@ -1,0 +1,649 @@
+---
+title: Game Genre and Appropriateness Research Summary
+jupyter: python3
+---
+
+
+
+##### Julianne Rasten, Olivia Smith
+
+##### **Research Question:**
+
+> How appropriate and stereotypically gendered are the free online games directed towards children?
+
+> The team shared personal experience of coming across unusal themed games on free large gaming websites at a young age. They recalled seeing many games with thumbnails of pregnant princesses, foot cleaning, tongue cleaning, mental breakdowns, and dramatic romantic scenarios. These types of games were marketed specifically towards girls by the use of often including "girls" in the website title. The concept led them to further wonder what similar marketed boy themed games consisted of.
+
+##### **Methodology:**
+
+> The team scraped data from the Girls Go Games website at https://www.girlsgogames.com/allcategories in order to conduct the research necessary.
+
+> For the team to observe all of the initial relevant website features, the file was retrieved and printed as text using the requests library with the following code.
+
+```{python}
+#import requests
+
+#r = requests.get("https://www.girlsgogames.com/allcategories")
+
+#print(r.text)
+```
+
+> The following function was created to obtain a list of all the links within the website's main page link representing EACH CATEGORY OF GAMES, it is necessary to import both the requests and BeautifulSoup library, create a list of all the links within the main page, and limit the list to the links representing the categories alone. By ensuring that every category can be observed, the team was able to observe game details.
+
+```{python}
+def get_game_category_links(url):
+    """
+    A function to get all game categories from a page of girlsgogames.com.
+
+        Args: A string url to the all catgories link on girlsgogames.com.
+
+        Output: A list of urls leading to each game category.
+    """
+    import requests
+    from bs4 import BeautifulSoup
+
+    # CREATES A LIST OF ALL LINKS PRESENT
+    reqs = requests.get(url)
+    soup = BeautifulSoup(reqs.text, "html.parser")
+
+    urls = []
+    for link in soup.find_all("a"):
+        urls.append(link.get("href"))
+
+    # REMOVES UNNECESSARY LINKS
+    del urls[0:204]
+    del urls[len(urls) - 11 : len(urls)]
+
+    urls.remove("https://www.girlsgogames.com/games/action")
+    urls.remove("https://www.girlsgogames.com/games/adventure")
+    urls.remove("https://www.girlsgogames.com/games/animals")
+    urls.remove("https://www.girlsgogames.com/games/art-and-creativity")
+    urls.remove("https://www.girlsgogames.com/games/beauty-games")
+    urls.remove("https://www.girlsgogames.com/games/cooking")
+    urls.remove("https://www.girlsgogames.com/games/decoration-games")
+    urls.remove("https://www.girlsgogames.com/games/dress_up")
+    urls.remove("https://www.girlsgogames.com/games/love-games")
+    urls.remove("https://www.girlsgogames.com/games/puzzle")
+    urls.remove("https://www.girlsgogames.com/games/simulation")
+    urls.remove("https://www.girlsgogames.com/games/skill")
+    urls.remove("https://www.girlsgogames.com/games/specials")
+    urls.remove("https://www.girlsgogames.com/games/sports")
+
+    return urls
+```
+
+> The function must be ran with the Girls Go Games main page to develop a variable of all the game categories.
+
+```{python}
+game_categories = get_game_category_links("https://www.girlsgogames.com/allcategories")
+print(game_categories)
+```
+
+> The following function was created to obtain a list of all the links within each game category page link representing EACH GAME, it is necessary to import both the requests and BeautifulSoup library, create a list of all the links within the used page text, limit the list to the links representing the games alone, and write the remaining links into a .txt file. By narrowing down to a smaller list of games the team was able to observe game details.
+
+```{python}
+def get_game_links(game_categories):
+    """
+    A function to get all game urls given a list of category links.
+
+        Args: A list of urls to different game category webpages.
+
+        Output: A string representing the .txt file of the game urls separated by commas.
+    """
+    import requests
+    from bs4 import BeautifulSoup
+
+    each_list_of_games = []
+    # LOOPS THROUGH EACH CATEGORY
+    for category in game_categories:
+        # CREATES A LIST OF ALL LINKS PRESENT
+        reqs_g = requests.get(category)
+        soup_g = BeautifulSoup(reqs_g.text, "html.parser")
+
+        urls_g = []
+        for link_g in soup_g.find_all("a"):
+            urls_g.append(link_g.get("href"))
+
+        # REMOVES UNNECESSARY LINKS
+        del urls_g[0:206]
+        category_name = category[35:]
+        link_g = f"https://www.girlsgogames.com/games/{category_name}"
+        if link_g in urls_g:
+            index_of_second = urls_g.index(
+                f"https://www.girlsgogames.com/games/{category_name}"
+            )
+            to_use = len(urls_g) - index_of_second
+            del urls_g[len(urls_g) - to_use : len(urls_g)]
+            for game in urls_g:
+                each_list_of_games.append(game)
+        else:
+            continue
+
+    # WRITES THE GAME URLS TO A .TXT FILE
+    each_list_of_games = ",".join(each_list_of_games)
+    f = open("all_games.txt", "w")
+    f.write(each_list_of_games)
+    f.close()
+
+    return "all_games.txt"
+```
+
+> The function must be ran with the list of game categories to develop a .txt file containing a string of all the game links.
+
+```{python}
+get_game_links(game_categories)
+```
+
+> The following function was created to obtain a list of EACH GAME TITLE, it is necessary to create a list of all the game links that are within the input file, refine the links to just where the title is located, separate the results with spaces, and write the list of game titles into a .txt file. By looking at the game titles, the team could question the target words being presented to capture young childrens' attention and how it varies by gender.
+
+```{python}
+def get_game_titles(all_game_urls):
+    """
+    A function to get all game titles given the url to each game from girlsgogames.com.
+
+        Args: A string representing a .txt file of the url to each game separated by commas.
+
+        Output: A string representing a .txt file of all game titles separated by spaces.
+    """
+    # CREATES A LIST OF ALL THE GAME URLS
+    f = open(all_game_urls, "r")
+    all_games = f.read()
+    f.close()
+    all_games = all_games.split(",")
+
+    all_game_titles = []
+    cropped_games = []
+
+    for game in all_games:
+        if game in cropped_games:
+            continue
+        else:
+            cropped_games.append(game)
+
+    # REFINES EACH URL AND FORMATS THE RESULTING GAME TITLE STRING
+    for game in cropped_games:
+        all_game_titles.append(game[34 : len(all_games)].replace("-", " "))
+
+    all_game_titles = " ".join(all_game_titles)
+
+    # WRITES THE GAME TITLES TO A .TXT FILE
+    g = open("all_game_titles.txt", "w")
+    g.write(all_game_titles)
+    g.close()
+
+    return "all_game_titles.txt"
+```
+
+> The function must be ran with a .txt file containing a string of all the game links to develop a .txt file containing a string of all the game titles.
+
+```{python}
+get_game_titles("all_games.txt")
+```
+
+> The following function was created to obtain a list of the GENRES OF EACH GAME, it is necessary to import both the requests and BeautifulSoup library, create a list of all the game page links, create a list of all the links within each game page link text, limit the list to the links representing the games' listed genres alone, refine the links to just where the game genre name is located, separate the results with spaces, and write the list of game genres into a .txt file. The genres of each game allowed the team to observe not only the most popular, but all the topics being marketed to young children.
+
+```{python}
+def get_game_genres(all_game_urls):
+    """
+    A function to get all game genres given the url to each game from girlsgogames.com.
+
+        Args: A string representing a .txt file of the url to each game separated by commas.
+
+        Output: A string representing a .txt file of all game genres separated by spaces.
+    """
+    import requests
+    from bs4 import BeautifulSoup
+
+    # CREATES A LIST OF ALL THE GAME URLS
+    f = open(all_game_urls, "r")
+    all_games = f.read()
+    f.close()
+    all_games = all_games.split(",")
+
+    each_list_of_genre_urls = []
+    for game in all_games:
+        # CREATES A LIST OF ALL LINKS PRESENT IN THE CURRENT GAME LINK
+        reqs_l = requests.get(game)
+        soup_l = BeautifulSoup(reqs_l.text, "html.parser")
+
+        urls_l = []
+        for link_l in soup_l.find_all("a"):
+            urls_l.append(link_l.get("href"))
+
+        # REMOVES UNNECESSARY LINKS
+        pre_link = "https://www.girlsgogames.com/"
+        if pre_link in urls_l:
+            urls_l.remove("https://www.girlsgogames.com/")
+        else:
+            continue
+        link_l = "https://www.girlsgogames.com/"
+        link_l_two = "https://www.girlsgogames.com/disclaimer"
+        if link_l in urls_l and link_l_two in urls_l:
+            key_index = urls_l.index("https://www.girlsgogames.com/")
+            del urls_l[0 : key_index + 2]
+            key_index_two = urls_l.index(
+                "https://www.girlsgogames.com/disclaimer"
+            )
+            diff = len(urls_l) - key_index_two
+            del urls_l[len(urls_l) - diff : len(urls_l)]
+            each_list_of_genre_urls.append(urls_l)
+        else:
+            continue
+
+    # REFINES EACH URL AND FORMATS THE RESULTING GAME GENRE STRING
+    all_game_genres = []
+    for list_l in each_list_of_genre_urls:
+        for genre_url in list_l:
+            all_game_genres.append(
+                genre_url[35 : len(all_games)].replace("-", " ")
+            )
+
+    all_game_genres = " ".join(all_game_genres)
+
+    # WRITES THE GAME GENRES TO A .TXT FILE
+    g = open("all_game_genres.txt", "w")
+    g.write(all_game_genres)
+    g.close()
+
+    return "all_game_genres.txt"
+```
+
+> The function must be ran with a .txt file containing a string of all the game links to develop a .txt file containing a string of all the game genres. The function is expected to have a longer processing time.
+
+```{python}
+get_game_genres('all_games.txt')
+```
+
+> The following function was created to obtain a list of THE SECOND PAGE BOY GAME LINKS, it is necessary to import both the requests and BeautifulSoup library, the create a list of all the links within the used page text, and limit the list to the links representing the games alone.
+
+```{python}
+def other_pages(page_num):
+    """
+    A function to get all game urls of the boy game genre given the desired page number.
+
+        Args: A int of the desired page number.
+
+        Output: A list of all the game urls on that boy genre page.
+    """
+    import requests
+    from bs4 import BeautifulSoup
+
+    genre = "https://www.girlsgogames.com/games/boy-games?page=" + str(page_num)
+    reqs_b = requests.get(genre)
+    soup_b = BeautifulSoup(reqs_b.text, "html.parser")
+    each_list_of_boy_games = []
+    urls_b = []
+    for link_b in soup_b.find_all("a"):
+        game_link = link_b.get("href")
+        urls_b.append(game_link)
+
+    # REMOVE UNNECESSARY LINKS
+    del urls_b[0:206]
+
+    index_of_second = urls_b.index(
+        f"https://www.girlsgogames.com/games/boy-games"
+    )
+    to_use = len(urls_b) - index_of_second - 1
+    del urls_b[len(urls_b) - to_use : len(urls_b)]
+    for game in urls_b:
+        each_list_of_boy_games.append(game)
+    return each_list_of_boy_games
+```
+
+> The following function was created to obtain a list of THE BOY GAME LINKS, it is necessary to import both the requests and BeautifulSoup library, the create a list of all the links within the used page text, limit the list to the links representing the games alone, and write the remaining links into a .txt file. By sectioning off the boy marketed games, the team could observe the variation in titles and genres as desired.
+
+```{python}
+def get_boy_game_links(
+    url_to_use="https://www.girlsgogames.com/games/boy-games",
+):
+    """
+    A function to get all of the game urls from the boy-game genre in girlsgogames.com.
+
+        Args: A string of the url to the boy genre page.
+
+        Output: A string representing a .txt file of all the boy game urls separated by commas.
+    """
+    import requests
+    from bs4 import BeautifulSoup
+
+    genre = url_to_use
+    reqs_g = requests.get(genre)
+    soup_g = BeautifulSoup(reqs_g.text, "html.parser")
+    each_list_of_games = []
+    urls_g = []
+    for link_g in soup_g.find_all("a"):
+        game_link = link_g.get("href")
+        urls_g.append(game_link)
+
+    # REMOVE UNNECESSARY LINKS
+    del urls_g[0:206]
+
+    index_of_second = urls_g.index(
+        f"https://www.girlsgogames.com/games/boy-games"
+    )
+    to_use = len(urls_g) - index_of_second - 1
+    del urls_g[len(urls_g) - to_use : len(urls_g)]
+    for game in urls_g:
+        each_list_of_games.append(game)
+
+    for i in range(1, 9):
+        page_game = other_pages(i)
+        for game in page_game:
+            each_list_of_games.append(game)
+
+    boy_games = each_list_of_games
+    g = open("boy_game_links.txt", "w")
+    g.write(",".join(boy_games))
+    g.close()
+    return "boy_game_links.txt"
+```
+
+> The function must be ran with a link to the boy games genre page to develop a .txt file containing a string of all the boy game links.
+
+```{python}
+get_boy_game_links()
+```
+
+> The following function was created to obtain a dictionary of EACH GAME GENRE AND IT'S NUMBER OF OCCURENCES ACROSS ALL GAMES, it is necessary to loop through the genres and count where that genre reoccurs within the overall genre list. Knowing the popularity of the genres allowed the team to observe what the Girls Go Games website most often presents to children.
+
+```{python}
+def genre_dictionary(genre_list):
+    """
+    A function to turn a list of game genres into a dictionary where the keys are the genre
+    as a string and the values are the number of instances of those genres.
+
+    Args: A list of genres separated by spaces in a .txt file.
+
+    Output: A dictionary variable containing strings and integers.
+    """
+    # READ THE TEXT FILE DATA
+    f = open(genre_list, "r")
+    genre_list_string = f.read()
+    f.close()
+
+    genre_list_list = genre_list_string.split()
+    label_dict = {}
+    # COUNT GENRES
+    for label in genre_list_list:
+        if label in label_dict:
+            label_dict[label] = label_dict[label] + 1
+        else:
+            label_dict[label] = 1
+
+    return label_dict
+```
+
+> The function must be ran with a string of all the game genres to develop a dictionary of each genres occurance count.
+
+```{python}
+genre_dictionary("all_game_genres.txt")
+```
+
+> The following code was used to prepare the collected variables to be represented in the team's desired visuals. The instructions for further developing each complete visual outside of python code is commented within each visual's coding section.
+
+> The first and second desired visuals were a series of word clouds representing commonwords found in the game titles. The first word cloud is comprised of all game titles, while the second one is comprised of only the site's 'boy-games'
+
+Through these visuals, the team wanted to display the content marketed towards girls in comparison to the content marketed towards boys. 
+
+```{python}
+import Project_Functions
+# To generate these word clouds, we read string variables with the clouds' respective titles into two .txt files using the 'get_game_titles' function.
+Project_Functions.get_game_titles("all_games.txt", "all_game_titles.txt")
+Project_Functions.get_game_titles("boy_game_file.txt", "boy_game_titles.txt")
+# These .txt files were then fed into the website https://www.freewordcloudgenerator.com/ to make their respective clouds. 
+# The files generated word clouds of their contents, and I altered the 'sensitivity' of the word cloud, 
+# i.e. how prevalent a word has to be to show up, to optimize clarity. 
+```
+
+>The third and fourth visuals are bargraphs representing game genres that are over represented in the girls and boys games respectively.
+Through these visuals, we were able to granulate the differences between the content of the games, and the assumptions that the developers made about their user-base. 
+
+```{python}
+import Project_Functions
+# The variables we used to make these visuals are dictionary variables output by the genre_dictionary function.
+# The dictionaries contain genres from the girls' and boys' games respecively as keys, and their values are the number of instances 
+# of the genres in their respective datasets.
+
+import matplotlib.pyplot as plt 
+import Project_Functions
+
+# Using the find_outliers function on both datasets to find the largest deviations of genres between the original and comparison.
+# The function outputs a dictionary, which is then filtered into a dictionary with only the genres with greatest deviation form the 
+# comparison data. 
+
+girls_outliers = Project_Functions.find_outliers("girls_genres.txt", "boy_genres.txt")
+girls_outliers_top = {}
+
+for genre in girls_outliers:
+    if girls_outliers[genre] > .008:
+        girls_outliers_top[genre] = girls_outliers[genre]
+
+boys_outliers = Project_Functions.find_outliers("boy_genres.txt", "girls_genres.txt")
+boys_outliers_top = {}
+for genre in boys_outliers:
+    if boys_outliers[genre] > .008:
+        boys_outliers_top[genre] = boys_outliers[genre]
+
+# The the keys of these dictionaries became the x-axis categories of their bar graphs, and their values the y-axis output.
+# The graphs were plotted, formatted, and labeled according to pyplot protocol for clarity. 
+
+girl_bargraph_x = list(girls_outliers_top.keys())
+girl_bargraph_y = []
+for key in girls_outliers_top:
+    girl_bargraph_y.append(girls_outliers[key]*100)
+    
+# creating the bar plot
+plt.bar(girl_bargraph_x, girl_bargraph_y, color ="maroon", 
+    width = 0.8)
+
+plt.xticks(rotation=80)
+plt.xlabel("Game Genre")
+plt.ylabel("Genre Instances Across Games in Percent")
+plt.title("Girl Game Genres with Significant Deviation from the Boy Genres")
+plt.show()
+
+boy_bargraph_x = list(boys_outliers_top.keys())
+boy_bargraph_y = []
+for key in boys_outliers_top:
+    boy_bargraph_y.append(boys_outliers[key]*100)
+
+# creating the bar plot
+plt.bar(boy_bargraph_x, boy_bargraph_y, color ="maroon", 
+    width = 0.8)
+
+plt.xticks(rotation=80)
+plt.xlabel("Game Genre")
+plt.ylabel("Genre Instances Across Games in Percent")
+plt.title("Boy Game Genres with Significant Deviation from the Girl Genres")
+plt.show()
+```
+
+> The fourth visual is a dual bar-graph detailing evaluations made on girlsgogame.com's game titles by Google's Cloud Natural Language Processor. The other bar represents the results of a chapter of Twilight being run through the same language processor, to provide a point of reference to the data. 
+
+```{python}
+# Google's Cloud Language Processor could only handle so many words at a time, so we populated a .txt file with 1000 words randomly
+# selected from the all_game_titles.txt file using the random library. This .txt file was then copy and pasted into the API on https://cloud.google.com/natural-language.
+#The code representing the boy_random_game_title.txt generation is an artifact of a previous visualization we pursued. 
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+f = open("all_game_titles.txt", "r")
+game_titles = f.read()
+f.close
+print(game_titles)
+
+game_titles = game_titles.split()
+
+print(game_titles)
+
+random_titles = []
+for _ in range(1000):
+    random_titles.append(random.choice(game_titles))
+
+random_titles = " ".join(random_titles)
+
+print(random_titles)
+
+g = open("random_game_titles.txt", "w")
+g.write(random_titles)
+g.close()
+
+f = open("boy_game_file.txt", "r")
+game_titles = f.read()
+f.close
+print(game_titles)
+
+game_titles = game_titles.split()
+
+print(game_titles)
+
+random_titles = []
+for _ in range(1000):
+    random_titles.append(random.choice(game_titles))
+
+random_titles = " ".join(random_titles)
+
+g = open("boy_random_game_titles.txt", "w")
+g.write(random_titles)
+g.close()
+ 
+#After copying and pasting the contents of the .txt file into the processor, it presented a list of
+#the text's top characterizations in terms of categories, and the program's confidence level in that categorization.
+# The top categorical evaluations of the Girlsgogames.com titles made up the 'category' variable representing the x-axis
+# while the confidence levels propogated the y-axis. To get a point of reference, I copied and pasted a chapter of Twilight
+# from the website /https://www.kkoworld.com/kitablar/Stefani_Mayer_Subh-eng.pdf and ran it through the processor in the same way,
+# noting its generated confidence levels for the chosen categories.
+# The graphs were then plotted, formatted, and labeled according to pyplot protocol. 
+
+category = ["Toxic", "Insult", "Profanity", "Health","Violent", "Illicit Drugs"]
+gg_confidence_level = [.0636, 0.0510, 0.0505, 0.0350, 0.0281, 0.0366]
+twilight_confidence_level = [.3001, .1773, .2870, .0322, .0281, .0385]
+X_axis = np.arange(len(category))
+
+plt.bar(X_axis - 0.2, gg_confidence_level, 0.4, label = 'Girls Go Games') 
+plt.bar(X_axis + .2, twilight_confidence_level, 0.4, label = 'Twilight (Point of Reference)') 
+plt.xticks(X_axis, category)
+plt.ylabel("Characterization Confidence Level")
+plt.xlabel("Characterizations of Content")
+plt.title("Characterizations of Girls Go Games Written Content")
+plt.legend()
+plt.show()
+```
+
+The unit tests further test the quality of the used functions.
+
+```{python}
+def test_get_game_category_links():
+    """
+    Check that the number of category urls matches the number of
+    categories manually counted from the site page.
+    """
+    category = get_game_category_links("https://www.girlsgogames.com/allcategories")
+    assert len(category) == 264
+
+def test_get_game_links():
+    """
+    Check that the string of game urls consists of no spaces.
+    """
+    games = get_game_links(["https://www.girlsgogames.com/games/io-games", "https://www.girlsgogames.com/games/2-player", "https://www.girlsgogames.com/games/3d-games"])
+    assert " " not in games
+
+def test_get_game_links_two():
+    """
+    Check that the string of game urls consists of commas.
+    """
+    games_one = get_game_links(["https://www.girlsgogames.com/games/io-games", "https://www.girlsgogames.com/games/2-player", "https://www.girlsgogames.com/games/3d-games"])
+    f = open(games_one, "r")
+    games = f.read()
+    assert games.count(",") > 1
+
+def test_get_game_titles():
+    """
+    Check that the string of game title urls consists of many spaces.
+    """
+    games_one = get_game_titles("all_games.txt")
+    f = open(games_one, "r")
+    games = f.read()
+    assert games.count(" ") > 10
+
+def test_get_game_titles_two():
+    """
+    Check that the string of game title urls consists of no commas.
+    """
+    games = get_game_titles("all_games.txt")
+    assert "," not in games
+
+def test_other_pages():
+    """
+    Check that the resulting number of game urls matches the amount
+    of boys games manually checked on the last page of the boy 
+    genre section, where the number of games vary from the 
+    previous pages.
+    """
+    games = other_pages(2)
+    assert len(games) == 37 
+
+def test_get_boy_game_links():
+    """
+    Check that the string of boy game urls consists of many commas.
+    """
+    games_one = get_boy_game_links()
+    f = open(games_one, "r")
+    games = f.read()
+    assert games.count(",") > 10 
+
+def test_get_boy_game_links_two():
+    """
+    Check that the string of boy game urls consists of no spaces.
+    """
+    games = get_game_titles("all_games.txt")
+    assert " " not in games
+
+def test_genre_dictionary():
+    """
+    Check that the genre dictionary consists of only positive integers.
+    """
+    genre_count = genre_dictionary("all_game_genres.txt")
+    for _, v in genre_count.items():
+        assert (v > -1)
+```
+
+```{python}
+test_get_game_category_links()
+test_get_game_links()
+test_get_game_links_two()
+test_get_game_titles()
+test_get_game_titles_two()
+test_other_pages()
+test_get_boy_game_links()
+test_get_boy_game_links_two()
+test_genre_dictionary()
+```
+
+> The knowledge of every title name, genre, and popularity allowed the team to compare the content againest gender sections within itself and appropriateness judgement. The team believed that the words used across the games accurately described the game content from personal testing of playing the games themselves. Therefore, analysis of the labels applied to the games seemed ideal for answering the team's research question.
+
+##### **Results:**
+
+> Visual 1:
+
+>>>> ![image.png](attachment:image.png)
+
+> Visual 2 and 3:
+
+> Girls Game Title Word Cloud
+
+>>>> ![image.png](attachment:image.png)
+
+> Boys Game Title Word Cloud
+
+![image.png](attachment:image.png)
+
+> Visual 4 and 5:
+
+![image.png](attachment:image.png)
+
+![image.png](attachment:image.png)
+
+##### **Interpretation:**
+
+> Based on our data, we have determined that the content on girlsgogames.com could be considered unsuitable for play. The language processor's evaluation of its word-use suggests a content-maturity level somewhat akin to a teen romance novel. Further the genres/titles of the games have an emphasis towards being stereotypically gendered, especially when in comparison to the site's designated games for boys. With this in mind, the authors have found reason to question the suitability of these games for a young audience. The data we collected was not personal data relating to user's actions on the site, and only relates to information readily available on the website, so the authors had little ethocal concerns about this project's data sourcing. Perhaps an important contextual implication to make is the authors' prior experiences with the website and the bias that comes with it. We entered this experiment expecting to see problematic games as we had experienced, perhaps offering a bias towards our findings. Further, an important point of context is the age of the website. This website was most popular in the early 2000s before parents or children were well versed on appropriate internet usage, and the games probably reflect this. Some difficulties we had with this project are navigating the antiquated and often haphazard html code that comprised the data we needed. Intense study of this layout was needed to find appropriate ways to scrape the data. Further, the sheer amount of games accumulated on this website, while good for data analysis, proved an issue in terms of code run-time. Thus, it could be hard to debug or troubleshoot code when it took so long to run. In the future, we would evaluate the descriptions of the games similarly to how we evaluated the titles and labels in this project, as well as image-process the games' title screens for content and appropriateness.
+
